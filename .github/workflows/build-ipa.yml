@@ -38,7 +38,8 @@ jobs:
           -sdk iphoneos \
           -derivedDataPath ../build/DerivedData \
           -destination generic/platform=iOS \
-          -allowProvisioningUpdates \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
           clean build
 
     - name: Generate IPA
@@ -51,7 +52,8 @@ jobs:
           -sdk iphoneos \
           -derivedDataPath ../build/DerivedData \
           -destination generic/platform=iOS \
-          -allowProvisioningUpdates \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
           -archivePath ../build/Madeira.xcarchive \
           archive
         
