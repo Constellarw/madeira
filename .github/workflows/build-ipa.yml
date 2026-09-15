@@ -38,6 +38,7 @@ jobs:
           -sdk iphoneos \
           -derivedDataPath ../build/DerivedData \
           -destination generic/platform=iOS \
+          -allowProvisioningUpdates \
           clean build
 
     - name: Generate IPA
@@ -50,6 +51,7 @@ jobs:
           -sdk iphoneos \
           -derivedDataPath ../build/DerivedData \
           -destination generic/platform=iOS \
+          -allowProvisioningUpdates \
           -archivePath ../build/Madeira.xcarchive \
           archive
         
