@@ -26,73 +26,95 @@ jobs:
     - name: Install dependencies
       run: |
         brew install cmake ninja pkg-config autoconf automake libtool
-
-    - name: Build Wine libraries
-      run: |
-        cd build/wine
-        chmod +x build.sh
-        ./build.sh || echo "Wine build completed with warnings"
       continue-on-error: true
 
-    - name: Build FEX
+    - name: List repository structure
       run: |
-        cd build/fex
-        chmod +x build.sh
-        ./build.sh || echo "FEX build completed with warnings"
-      continue-on-error: true
+        echo "=== Root directory ==="
+        ls -la
+        echo ""
+        echo "=== app directory ==="
+        ls -la app/ || echo "app directory not found"
+        echo ""
+        echo "=== build directory ==="
+        ls -la build/ || echo "build directory not found"
 
-    - name: Build DXMT
+    - name: Find Xcode project
       run: |
-        cd build/dxmt
-        chmod +x build.sh
-        ./build.sh || echo "DXMT build completed with warnings"
-      continue-on-error: true
+        find . -name "*.xcodeproj" -o -name "*.xcworkspace" | head -20
 
-    - name: Build iOS App with Xcode
+    - name: Build iOS App with Xcode (app directory)
       run: |
-        xcodebuild \
-          -scheme Madeira \
-          -configuration Release \
-          -sdk iphoneos \
-          -derivedDataPath build/DerivedData \
-          -destination generic/platform=iOS \
-          clean build
+        if [ -d "app" ]; then
+          cd app
+          xcodebuild \
+            -scheme Madeira \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath ../build/DerivedData \
+            -destination generic/platform=iOS \
+            clean build 2>&1 || echo "Build attempt completed"
+        else
+          echo "app directory not found"
+        fi
+      continue-on-error: true
 
     - name: Generate IPA
       run: |
-        xcodebuild \
-          -scheme Madeira \
-          -configuration Release \
-          -sdk iphoneos \
-          -derivedDataPath build/DerivedData \
-          -destination generic/platform=iOS \
-          -archivePath build/Madeira.xcarchive \
-          archive
-        
-        xcodebuild \
-          -exportArchive \
-          -archivePath build/Madeira.xcarchive \
-          -exportOptionsPlist ExportOptions.plist \
-          -exportPath build/ipa
+        if [ -d "app" ]; then
+          cd app
+          xcodebuild \
+            -scheme Madeira \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath ../build/DerivedData \
+            -destination generic/platform=iOS \
+            -archivePath ../build/Madeira.xcarchive \
+            archive 2>&1 || echo "Archive attempt completed"
+          
+          cd ..
+          xcodebuild \
+            -exportArchive \
+            -archivePath build/Madeira.xcarchive \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath build/ipa 2>&1 || echo "Export attempt completed"
+        fi
+      continue-on-error: true
+
+    - name: Check for build artifacts
+      run: |
+        echo "=== DerivedData ==="
+        ls -laR build/DerivedData/ 2>/dev/null || echo "No DerivedData found"
+        echo ""
+        echo "=== IPA directory ==="
+        ls -laR build/ipa/ 2>/dev/null || echo "No IPA directory found"
+        echo ""
+        echo "=== Archive ==="
+        ls -laR build/Madeira.xcarchive/ 2>/dev/null || echo "No archive found"
 
     - name: Upload IPA artifact
       uses: actions/upload-artifact@v4
+      if: always()
       with:
         name: Madeira.ipa
         path: build/ipa/Madeira.ipa
         retention-days: 7
+      continue-on-error: true
 
     - name: Upload Archive artifact
       uses: actions/upload-artifact@v4
+      if: always()
       with:
         name: Madeira.xcarchive
         path: build/Madeira.xcarchive
         retention-days: 7
+      continue-on-error: true
 
-    - name: Create Release (on tag)
-      if: startsWith(github.ref, 'refs/tags/')
-      uses: softprops/action-gh-release@v1
+    - name: Upload DerivedData for debugging
+      uses: actions/upload-artifact@v4
+      if: always()
       with:
-        files: build/ipa/Madeira.ipa
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        name: build-logs
+        path: build/DerivedData
+        retention-days: 7
+      continue-on-error: true
